@@ -3,7 +3,7 @@
     "details": [
       {
         "appID": "V3FFWT46QV.com.misri.lalvakhs.lalVakhs",
-        "paths": [ "/LalVakhsContent/*", "/lalvakhscontent/*", "/app/*", "/askpage" ]
+        "paths": [ "/LalVakhsContent/*", "/lalvakhscontent/*", "/app/*", "/askpage", "/LalVakhsContent/askpage" ]
       }
     ]
   }
