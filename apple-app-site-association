@@ -1,1 +1,10 @@
-
+{
+  "applinks": {
+    "details": [
+      {
+        "appID": "V3FFWT46QV.com.misri.lalvakhs.lalVakhs",
+        "paths": [ "/detailpage/*", "/runvideos/*", "/askpage", "/settings" ]
+      }
+    ]
+  }
+}
