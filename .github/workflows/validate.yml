@@ -1,0 +1,72 @@
+name: Validate Content
+on: push
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate gzip integrity
+        run: |
+          failed=0
+          for f in *.txt; do
+            if ! gunzip -t "$f" 2>/dev/null; then
+              echo "❌ INVALID GZIP: $f"
+              failed=1
+            else
+              echo "✅ $f"
+            fi
+          done
+          if [ $failed -eq 1 ]; then exit 1; fi
+
+      - name: Check entry counts match
+        if: "!contains(github.event.head_commit.message, '[skip-size-check]')"
+        run: |
+          topic=$(gunzip -c topic.txt | grep -c "'''")
+          title=$(gunzip -c detail_page_title.txt | grep -c "'''")
+          subtitle=$(gunzip -c detail_page_subtitle.txt | grep -c "'''")
+          body=$(gunzip -c detail_page_body.txt | grep -c "'''")
+          echo "Entries — topic:$topic title:$title subtitle:$subtitle body:$body"
+          failed=0
+          if [ "$topic" != "$title" ]; then echo "❌ MISMATCH: topic($topic) vs title($title)"; failed=1; fi
+          if [ "$topic" != "$subtitle" ]; then echo "❌ MISMATCH: topic($topic) vs subtitle($subtitle)"; failed=1; fi
+          if [ "$topic" != "$body" ]; then echo "❌ MISMATCH: topic($topic) vs body($body)"; failed=1; fi
+          if [ $failed -eq 1 ]; then exit 1; fi
+          echo "✅ All entry counts match"
+
+      - name: Check for drastic file size changes
+        if: "!contains(github.event.head_commit.message, '[skip-size-check]')"
+        run: |
+          declare -A expected_sizes
+          expected_sizes[custom_messaging.txt]=52
+          expected_sizes[detail_page_body.txt]=260903
+          expected_sizes[detail_page_subtitle.txt]=23371
+          expected_sizes[detail_page_title.txt]=25048
+          expected_sizes[topic.txt]=6146
+          expected_sizes[youtubeUrlsHD.txt]=3277
+          expected_sizes[youtubeUrlsHdEnglish.txt]=4145
+          expected_sizes[youtubeUrlsHdKashmiri-English.txt]=4156
+          expected_sizes[recommended_topics_v2.txt]=330
+
+          threshold=50
+          failed=0
+          for f in "${!expected_sizes[@]}"; do
+            if [ ! -f "$f" ]; then continue; fi
+            actual=$(wc -c < "$f" | tr -d ' ')
+            expected=${expected_sizes[$f]}
+            change=$(( (actual - expected) * 100 / expected ))
+            abs_change=${change#-}
+            if [ "$abs_change" -gt "$threshold" ]; then
+              echo "⚠️  $f changed by ${change}% (expected ~${expected}B, got ${actual}B)"
+              failed=1
+            else
+              echo "✅ $f (${change}% change)"
+            fi
+          done
+          if [ $failed -eq 1 ]; then
+            echo ""
+            echo "❌ File size changed by more than ${threshold}%."
+            echo "   If intentional, re-commit with [skip-size-check] in the message."
+            exit 1
+          fi
