@@ -47,10 +47,22 @@ jobs:
       - name: Check entry counts match
         if: "!contains(github.event.head_commit.message, '[skip-size-check]')"
         run: |
-          topic=$(gunzip -c topic.txt | grep -c "'''")
-          title=$(gunzip -c detail_page_title.txt | grep -c "'''")
-          subtitle=$(gunzip -c detail_page_subtitle.txt | grep -c "'''")
-          body=$(gunzip -c detail_page_body.txt | grep -c "'''")
+          # Each entry is wrapped in a pair of ''' markers (one open, one
+          # close). Single-line entries (e.g. topic.txt) put both markers on
+          # the same line; multi-line entries (title/subtitle/body) put them
+          # on separate lines. Counting matching *lines* (grep -c) overcounts
+          # multi-line entries 2x vs single-line ones, so count total '''
+          # occurrences instead and divide by 2 to get the true entry count.
+          count_entries() {
+            local n
+            n=$(gunzip -c "$1" | grep -o "'''" | wc -l | tr -d ' ')
+            echo $(( n / 2 ))
+          }
+
+          topic=$(count_entries topic.txt)
+          title=$(count_entries detail_page_title.txt)
+          subtitle=$(count_entries detail_page_subtitle.txt)
+          body=$(count_entries detail_page_body.txt)
           echo "Entries — topic:$topic title:$title subtitle:$subtitle body:$body"
           failed=0
           if [ "$topic" != "$title" ]; then echo "❌ MISMATCH: topic($topic) vs title($title)"; failed=1; fi
