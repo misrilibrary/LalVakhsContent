@@ -6,9 +6,20 @@ This repo uses a GitHub Actions workflow to validate content files on every push
 
 | Check | What it catches | Can be skipped? |
 |-------|----------------|-----------------|
-| **Gzip integrity** | Corrupted or non-gzip files | No (always runs) |
+| **Gzip integrity** | Corrupted or non-gzip files | No (always runs) — except `recommended_topics.txt`, see below |
 | **Entry count match** | Mismatched entries between topic, title, subtitle, and body files | Yes |
 | **File size change >50%** | Accidental truncation, wrong file pushed, or unexpected bulk changes | Yes |
+
+## Legacy plain-text exception: `recommended_topics.txt`
+
+`recommended_topics.txt` (pre-`_v2`) is intentionally kept as **plain text,
+not gzipped**. It's still served to older app clients that haven't migrated
+to the gzipped `recommended_topics_v2.txt` format. The gzip integrity check
+explicitly exempts this one filename and instead verifies it is *not*
+gzipped — if it ever looks gzipped (e.g. accidentally overwritten by the
+gzip pipeline), the check fails loudly rather than silently breaking those
+older clients. Do not run this file through `gzip-tool.py` or the release
+scripts; only `recommended_topics_v2.txt` is part of the automated pipeline.
 
 ## How It Works
 
